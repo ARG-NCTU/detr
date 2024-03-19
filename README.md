@@ -157,11 +157,21 @@ We provide a few notebooks in colab to help you get a grasp on DETR:
 
 # Usage - Object detection
 There are no extra compiled components in DETR and package dependencies are minimal,
-so the code is very simple to use. We provide instructions how to install dependencies via conda.
+so the code is very simple to use. We provide instructions how to install dependencies via Docker (recommended) or conda.
+
+## 1. Clone the repository
 First, clone the repository locally:
 ```
 git clone https://github.com/facebookresearch/detr.git
 ```
+
+## 2. With Docker (recommended)
+Then, install and run the docker image.
+```
+source Docker/docker_run.sh
+```
+
+## 2. With Conda (not recommended)
 Then, install PyTorch 1.5+ and torchvision 0.6+:
 ```
 conda install -c pytorch pytorch torchvision
@@ -178,7 +188,7 @@ That's it, should be good to train and evaluate detection models.
 pip install git+https://github.com/cocodataset/panopticapi.git
 ```
 
-## Data preparation
+## 3. Data preparation
 
 Download and extract COCO 2017 train and val images with annotations from
 [http://cocodataset.org](http://cocodataset.org/#download).
@@ -189,11 +199,22 @@ path/to/coco/
   train2017/    # train images
   val2017/      # val images
 ```
+For example:
+```
+COCO_2017/
+  annotations/  # annotation json files
+  train2017/    # train images
+  val2017/      # val images
+```
 
-## Training
+## 4. Training
 To train baseline DETR on a single node with 8 gpus for 300 epochs run:
 ```
 python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco 
+```
+For example (more arguments setting is in main.py):
+```
+python -m torch.distributed.launch --batch_size 4 --nproc_per_node=1 --use_env main.py --coco_path COCO_2017 --output_dir output --lr_drop 100 --epochs 150
 ```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
@@ -207,10 +228,14 @@ Images are rescaled to have min size 800 and max size 1333.
 The transformer is trained with dropout of 0.1, and the whole model is trained with grad clip of 0.1.
 
 
-## Evaluation
+## 5. Evaluation
 To evaluate DETR R50 on COCO val5k with a single GPU run:
 ```
 python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
+```
+For example:
+```
+python main.py --batch_size 4 --no_aux_loss --eval --resume output/your_model.pth --coco_path COCO_2017
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
