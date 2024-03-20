@@ -214,7 +214,7 @@ python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_p
 ```
 For example (more arguments setting is in main.py):
 ```
-python -m torch.distributed.launch --batch_size 4 --nproc_per_node=1 --use_env main.py --coco_path COCO_2017 --output_dir output --lr_drop 100 --epochs 150
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py --coco_path COCO_2017 --output_dir output --lr_drop 100 --epochs 150
 ```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
@@ -235,7 +235,7 @@ python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipubli
 ```
 For example:
 ```
-python main.py --batch_size 4 --no_aux_loss --eval --resume output/your_model.pth --coco_path COCO_2017
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/checkpoint.pth --coco_path COCO_2017
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
