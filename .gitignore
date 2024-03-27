@@ -17,3 +17,5 @@ not_tracked_dir/
 .vscode
 COCO_2017/
 output/
+Boat_dataset.zip
+Boat_dataset/

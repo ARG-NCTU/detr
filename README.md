@@ -199,12 +199,14 @@ path/to/coco/
   train2017/    # train images
   val2017/      # val images
 ```
-For example:
+Download and extract real & virtual Boat 42.8k train and 5.4k val images with annotations from
+[NAS](http://gofile.me/773h8/XDwnn8WOo) for finetuning.
+We expect the directory structure to be the following:
 ```
-COCO_2017/
+Boat_dataset/
   annotations/  # annotation json files
-  train2017/    # train images
-  val2017/      # val images
+  train2023/    # train images
+  val2023/      # val images
 ```
 
 ## 4. Training
@@ -212,9 +214,9 @@ To train baseline DETR on a single node with 8 gpus for 300 epochs run:
 ```
 python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco 
 ```
-For example (more arguments setting is in main.py):
+Finetuning pretrained model for example (more arguments setting is in main.py):
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py --coco_path COCO_2017 --output_dir output --lr_drop 100 --epochs 150
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path Boat_dataset --output_dir output --lr_drop 5 --epochs 10
 ```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
@@ -233,9 +235,9 @@ To evaluate DETR R50 on COCO val5k with a single GPU run:
 ```
 python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
 ```
-For example:
+Evaluate finetuned model for example:
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/checkpoint.pth --coco_path COCO_2017
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/checkpoint.pth --coco_path Boat_dataset
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
