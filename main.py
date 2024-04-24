@@ -9,11 +9,13 @@ from pathlib import Path
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, DistributedSampler
+import sys
+import cv2
 
 import datasets
 import util.misc as utils
 from datasets import build_dataset, get_coco_api_from_dataset
-from engine import evaluate, train_one_epoch
+from engine import evaluate, train_one_epoch, image_inference, video_inference
 from models import build_model
 
 
@@ -99,6 +101,22 @@ def get_args_parser():
     parser.add_argument('--world_size', default=1, type=int,
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
+    
+    # Evaluation parameters
+    parser.add_argument('--real_img', default=False, type=bool, help='real or real+virtual image')
+    parser.add_argument('--AP_path', default='output/0328/AP_summerize.txt', type=str, help='path to save AP result')
+    
+    # Inference parameters
+    parser.add_argument('--inference_image', action='store_true', help='Run inference on a image file')
+    parser.add_argument('--input_image_path', type=str, help='Input image file path for inference')
+    parser.add_argument('--output_image_path', default='output.jpg', help='Output image file path for inference')
+    
+    parser.add_argument('--classes_path', default='Boat_dataset/classes.txt', help='Classes file path for inference')
+    
+    parser.add_argument('--inference_video', action='store_true', help='Run inference on a video file')
+    parser.add_argument('--input_video_path', type=str, help='Input video file path for inference')
+    parser.add_argument('--output_video_path', default='output.mp4', help='Output video file path for inference')
+    
     return parser
 
 
@@ -120,6 +138,36 @@ def main(args):
 
     model, criterion, postprocessors = build_model(args)
     model.to(device)
+
+
+    if args.inference_video or args.inference_image:
+        
+        # Load model weights for inference if specified
+        if args.resume:
+            checkpoint = torch.load(args.resume, map_location=device)
+            model.load_state_dict(checkpoint['model'])
+        
+        if args.inference_image:
+            # Ensure image path is provided
+            if args.input_image_path is None:
+                print("Error: --input_image_path must be specified for inference mode.")
+                sys.exit(1)
+            
+            # Run inference on image
+            image = cv2.imread(args.input_image_path)
+            out_image = image_inference(image, model, postprocessors, device, args.classes_path)
+            cv2.imwrite(args.output_image_path, out_image)
+            return
+        
+        if args.inference_video:
+            # Ensure video path is provided
+            if args.input_video_path is None:
+                print("Error: --input_video_path must be specified for inference mode.")
+                sys.exit(1)
+            
+            # Run inference on video
+            video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path)
+            return
 
     model_without_ddp = model
     if args.distributed:
@@ -183,7 +231,7 @@ def main(args):
 
     if args.eval:
         test_stats, coco_evaluator = evaluate(model, criterion, postprocessors,
-                                              data_loader_val, base_ds, device, args.output_dir)
+                                              data_loader_val, base_ds, device, args.output_dir, args.AP_path)
         if args.output_dir:
             utils.save_on_master(coco_evaluator.coco_eval["bbox"].eval, output_dir / "eval.pth")
         return

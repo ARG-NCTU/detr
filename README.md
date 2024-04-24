@@ -235,9 +235,13 @@ To evaluate DETR R50 on COCO val5k with a single GPU run:
 ```
 python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
 ```
-Evaluate finetuned model for example:
+Evaluate finetuned model with real & virtual dataset for example:
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/checkpoint.pth --coco_path Boat_dataset
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint_0328.pth --coco_path Boat_dataset --AP_path output/0328/AP_summerize.txt
+```
+Evaluate finetuned model with real dataset for example:
+```
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint_0328.pth --coco_path Boat_dataset --real_img --AP_path output/0328/AP_summerize_real.txt
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
@@ -245,6 +249,21 @@ Note that numbers vary depending on batch size (number of images) per GPU.
 Non-DC5 models were trained with batch size 2, and DC5 with 1,
 so DC5 models show a significant drop in AP if evaluated with more
 than 1 image per GPU.
+
+## 6. Inference
+Inference finetuned model with image for example:
+```
+python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/wam-v.jpeg --output_image_path output_image/wam-v_out.jpg --classes_path Boat_dataset/classes.txt
+```
+
+Inference finetuned model with video for example:
+```
+python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
+
+python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/Multi_Boat.mp4 --output_video_path output_video/Multi_Boat_out.mp4 --classes_path Boat_dataset/classes.txt
+
+
+```
 
 ## Multinode training
 Distributed training is available via Slurm and [submitit](https://github.com/facebookincubator/submitit):

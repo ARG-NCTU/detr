@@ -6,7 +6,7 @@ import math
 import os
 import sys
 from typing import Iterable
-
+import cv2
 import torch
 
 import util.misc as utils
@@ -65,7 +65,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
 
 
 @torch.no_grad()
-def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir):
+def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir, AP_path):
     model.eval()
     criterion.eval()
 
@@ -135,6 +135,11 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
     if coco_evaluator is not None:
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
+    
+    sys.stdout = open(AP_path, 'w')
+    coco_evaluator.summarize()
+    sys.stdout.close()
+
     panoptic_res = None
     if panoptic_evaluator is not None:
         panoptic_res = panoptic_evaluator.summarize()
@@ -149,3 +154,92 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         stats['PQ_th'] = panoptic_res["Things"]
         stats['PQ_st'] = panoptic_res["Stuff"]
     return stats, coco_evaluator
+
+################## Inference functions ##################
+
+def load_labels(file_path):
+    with open(file_path, 'r') as file:
+        labels = file.read().strip().split('\n')
+    return {i: label for i, label in enumerate(labels)}
+
+@torch.no_grad()
+def preprocess(frame, device):
+    # Example preprocessing (adjust as needed)
+    # Convert frame to tensor, handle normalization, resizing, etc.
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = torch.tensor(frame).float() / 255.0  # Normalize to [0, 1]
+    frame = frame.permute(2, 0, 1).unsqueeze(0).to(device)  # CHW format and add batch dimension
+    return frame
+
+@torch.no_grad()
+def perform_inference(frame, model, input_tensor, postprocessors, device):
+    model.eval()
+    with torch.no_grad():
+        outputs = model(input_tensor)
+    
+    # Dummy targets for processing (if necessary)
+    targets = [{'orig_size': torch.tensor([frame.shape[0], frame.shape[1]]), 
+                'size': torch.tensor([input_tensor.shape[2], input_tensor.shape[3]])}]
+    # Process outputs
+    orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0).to(device)
+    results = postprocessors['bbox'](outputs, orig_target_sizes)
+    return results
+
+def draw_detections(frame, results, classes_path):
+    LABELS = load_labels(classes_path)
+    # Example of results handling -- adjust based on your actual output structure
+    for result in results:
+        boxes = result['boxes']  # Assuming the result dict contains 'boxes'
+        scores = result['scores']  # Assuming there are confidence scores
+        labels = result['labels']  # Assuming there are labels
+
+        for box, score, label in zip(boxes, scores, labels):
+            if score > 0.5:  # Threshold can be adjusted
+                label_name = LABELS.get(label.item(), "Unknown")  # Get the label name from the dictionary
+                cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
+                cv2.putText(frame, f'{label_name}: {score:.2f}', (int(box[0]), int(box[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+
+    return frame
+    
+@torch.no_grad()
+def image_inference(frame, model, postprocessors, device, classes_path):
+    input_tensor = preprocess(frame, device)
+    results = perform_inference(frame, model, input_tensor, postprocessors, device)
+    frame = draw_detections(frame, results, classes_path)
+    return frame
+
+@torch.no_grad()
+def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path):
+    
+    cap = cv2.VideoCapture(input_video_path)
+    if not cap.isOpened():
+        print("Error opening video stream or file")
+        return
+
+    # Get video properties
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+
+    # Define the codec and create VideoWriter object
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust codec as per your requirement
+    out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
+
+    output_img_dir = os.path.join(os.path.dirname(output_video_path), os.path.basename(output_video_path).replace('.mp4', '') + '_images')
+    os.makedirs(output_img_dir, exist_ok=True)
+
+    count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame = image_inference(frame, model, postprocessors, device, classes_path)
+        out.write(frame)
+        
+        if count % 100 == 0:
+            cv2.imwrite(os.path.join(output_img_dir, f'{count}.png'), frame)
+        count += 1
+        
+    cap.release()
+    out.release()
+    # cv2.destroyAllWindows()

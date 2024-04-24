@@ -19,3 +19,8 @@ COCO_2017/
 output/
 Boat_dataset.zip
 Boat_dataset/
+source_image/
+source_video/
+output_image/
+output_video/
+pretrained_models/
