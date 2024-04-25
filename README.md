@@ -160,9 +160,13 @@ There are no extra compiled components in DETR and package dependencies are mini
 so the code is very simple to use. We provide instructions how to install dependencies via Docker (recommended) or conda.
 
 ## 1. Clone the repository
-First, clone the repository locally:
+First, clone the repository locally (ssh):
 ```
-git clone https://github.com/facebookresearch/detr.git
+git clone git@github.com:ARG-NCTU/detr.git
+```
+You can also clone with https:
+```
+git clone https://github.com/ARG-NCTU/detr.git
 ```
 
 ## 2. With Docker (recommended)
