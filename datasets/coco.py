@@ -148,21 +148,9 @@ def build(image_set, args):
     root = Path(args.coco_path)
     assert root.exists(), f'provided COCO path {root} does not exist'
     mode = 'instances'
-    
-    # Dynamically find dataset directories
-    train_dir = next(root.glob("train*"), None)
-    val_dir = next(root.glob("val*"), None)
-    assert train_dir and val_dir, "Train or validation directories not found in the specified COCO path."
-
-    if args.real_img:
-        val_anno_file = f'{mode}_{val_dir.name}r.json'
-    else:
-        val_anno_file = f'{mode}_{val_dir.name}.json'
-    
-    # Dynamically construct PATHS based on found directories
     PATHS = {
-        "train": (train_dir, root / "annotations" / f'{mode}_{train_dir.name}.json'),
-        "val": (val_dir, root / "annotations" / val_anno_file),
+        "train": (root / "train2024", root / "annotations" / f'{mode}_train2024v.json'),
+        "val": (root / "val2024", root / "annotations" / f'{mode}_val2024.json'),
     }
 
     img_folder, ann_file = PATHS[image_set]

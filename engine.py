@@ -136,9 +136,11 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         coco_evaluator.accumulate()
         coco_evaluator.summarize()
     
-    sys.stdout = open(AP_path, 'w')
-    coco_evaluator.summarize()
-    sys.stdout.close()
+    with open(AP_path, 'w') as f:
+        original_stdout = sys.stdout
+        sys.stdout = f
+        coco_evaluator.summarize()
+        sys.stdout = original_stdout
 
     panoptic_res = None
     if panoptic_evaluator is not None:

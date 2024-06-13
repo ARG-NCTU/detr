@@ -102,9 +102,10 @@ def get_args_parser():
                         help='number of distributed processes')
     parser.add_argument('--dist_url', default='env://', help='url used to set up distributed training')
     
+    # parser.add_argument('--train_real_virtual_img', default='both', type=str, help='both or real or virtual')
     # Evaluation parameters
-    parser.add_argument('--real_img', default=False, type=bool, help='real or real+virtual image')
-    parser.add_argument('--AP_path', default='output/0328/AP_summerize.txt', type=str, help='path to save AP result')
+    # parser.add_argument('--val_real_virtual_img', default='both', type=str, help='both or real or virtual')
+    parser.add_argument('--AP_path', default='output/AP_summerize.txt', type=str, help='path to save AP result')
     
     # Inference parameters
     parser.add_argument('--inference_image', action='store_true', help='Run inference on a image file')
@@ -119,6 +120,13 @@ def get_args_parser():
     
     return parser
 
+
+def load_model_state(model, checkpoint):
+    model_dict = model.state_dict()
+    pretrained_dict = {k: v for k, v in checkpoint['model'].items() if k in model_dict and model_dict[k].size() == v.size()}
+    model_dict.update(pretrained_dict)  # update the existing model state dictionary with pretrained weights
+    model.load_state_dict(model_dict)
+    print("Loaded model weights with selective layer loading.")
 
 def main(args):
     utils.init_distributed_mode(args)
@@ -214,7 +222,8 @@ def main(args):
 
     if args.frozen_weights is not None:
         checkpoint = torch.load(args.frozen_weights, map_location='cpu')
-        model_without_ddp.detr.load_state_dict(checkpoint['model'])
+        # model_without_ddp.detr.load_state_dict(checkpoint['model'])
+        load_model_state(model_without_ddp.detr, checkpoint)
 
     output_dir = Path(args.output_dir)
     if args.resume:
@@ -260,7 +269,7 @@ def main(args):
                 }, checkpoint_path)
 
         test_stats, coco_evaluator = evaluate(
-            model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir
+            model, criterion, postprocessors, data_loader_val, base_ds, device, args.output_dir, args.AP_path
         )
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},

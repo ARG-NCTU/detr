@@ -212,15 +212,28 @@ Boat_dataset/
   train2023/    # train images
   val2023/      # val images
 ```
+Download and extract fish jump 1.7k train and 434 val images with annotations from
+[NAS](http://gofile.me/773h8/YMUwyBpjN) for finetuning.
+We expect the directory structure to be the following:
+```
+fish_jump_dataset_2024/
+  annotations/  # annotation json files
+  train2023/    # train images
+  val2023/      # val images
+```
 
 ## 4. Training
 To train baseline DETR on a single node with 8 gpus for 300 epochs run:
 ```
 python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco 
 ```
-Finetuning pretrained model for example (more arguments setting is in main.py):
+Finetuning pretrained model for (boat) example (more arguments setting is in main.py):
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path Boat_dataset --output_dir output --lr_drop 5 --epochs 10
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path Boat_dataset --output_dir output/boat-0612 --lr_drop 5 --epochs 20
+```
+Finetuning pretrained model for (fish jump) example:
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path fish_jump_dataset_2024 --output_dir output/0612 --lr_drop 5 --epochs 20
 ```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
@@ -241,11 +254,15 @@ python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipubli
 ```
 Evaluate finetuned model with real & virtual dataset for example:
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint_0328.pth --coco_path Boat_dataset --AP_path output/0328/AP_summerize.txt
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint.pth --coco_path Boat_dataset --AP_path output/AP_summerize.txt
 ```
-Evaluate finetuned model with real dataset for example:
+Evaluate finetuned model with real dataset for (boat) example:
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint_0328.pth --coco_path Boat_dataset --real_img --AP_path output/0328/AP_summerize_real.txt
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint.pth --coco_path Boat_dataset --AP_path output/0328/AP_summerize_real.txt
+```
+Evaluate finetuned model with real dataset for (fish jump) example:
+```
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0612/checkpoint.pth --coco_path fish_jump_dataset_2024 --AP_path output/0612/AP_summerize_real.txt
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
@@ -260,13 +277,13 @@ Inference finetuned model with image for example:
 python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/wam-v.jpeg --output_image_path output_image/wam-v_out.jpg --classes_path Boat_dataset/classes.txt
 ```
 
-Inference finetuned model with video for example:
+Inference finetuned model with video for (boat) example:
 ```
 python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
-
-python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/Multi_Boat.mp4 --output_video_path output_video/Multi_Boat_out.mp4 --classes_path Boat_dataset/classes.txt
-
-
+```
+Inference finetuned model with video for (fish jump) example:
+```
+python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path fish_jump_dataset_2024/classes.txt
 ```
 
 ## Multinode training
@@ -309,6 +326,15 @@ For panoptic segmentation you can train on a single node with 8 gpus for 25 epoc
 python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --masks --epochs 25 --lr_drop 15 --coco_path /path/to/coco  --coco_panoptic_path /path/to/coco_panoptic  --dataset_file coco_panoptic --frozen_weights /output/path/box_model/checkpoint.pth --output_dir /output/path/segm_model
 ```
 For instance segmentation only, simply remove the `dataset_file` and `coco_panoptic_path` arguments from the above command line.
+
+Finetuning pretrained model for (boat) example (more arguments setting is in main.py):
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 10 --coco_path Boat_dataset --frozen_weights output/0328/checkpoint.pth --output_dir output/0613
+```
+Finetuning pretrained model for (fish jump) example:
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 10 --coco_path fish_jump_dataset_2024 --frozen_weights output/0612/checkpoint.pth --output_dir output/0613
+```
 
 # License
 DETR is released under the Apache 2.0 license. Please see the [LICENSE](LICENSE) file for more information.

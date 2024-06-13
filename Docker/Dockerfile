@@ -45,7 +45,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # Install OpenCV Python package
-RUN pip install opencv-python-headless  # Use opencv-python-headless if you don't need GUI functionalities
+RUN pip install opencv-python-headless  
 
 ##################################### setting ###################################################
 
