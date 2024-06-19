@@ -33,6 +33,8 @@ class CocoDetection(torchvision.datasets.CocoDetection):
 def convert_coco_poly_to_mask(segmentations, height, width):
     masks = []
     for polygons in segmentations:
+        if len(polygons) == 0:
+            continue
         rles = coco_mask.frPyObjects(polygons, height, width)
         mask = coco_mask.decode(rles)
         if len(mask.shape) < 3:
@@ -74,6 +76,8 @@ class ConvertCocoPolysToMask(object):
         if self.return_masks:
             segmentations = [obj["segmentation"] for obj in anno]
             masks = convert_coco_poly_to_mask(segmentations, h, w)
+            if len(masks.shape) == 0:
+                masks = torch.zeros((0, h, w), dtype=torch.uint8)
 
         keypoints = None
         if anno and "keypoints" in anno[0]:
@@ -149,7 +153,7 @@ def build(image_set, args):
     assert root.exists(), f'provided COCO path {root} does not exist'
     mode = 'instances'
     PATHS = {
-        "train": (root / "train2024", root / "annotations" / f'{mode}_train2024v.json'),
+        "train": (root / "train2024", root / "annotations" / f'{mode}_train2024.json'),
         "val": (root / "val2024", root / "annotations" / f'{mode}_val2024.json'),
     }
 

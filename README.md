@@ -235,6 +235,13 @@ Finetuning pretrained model for (fish jump) example:
 ```
 python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path fish_jump_dataset_2024 --output_dir output/0612 --lr_drop 5 --epochs 20
 ```
+Finetuning pretrained model for (water splash) example:
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path water_splash_dataset_2024 --output_dir output/0618 --lr_drop 200 --epochs 300
+```
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume output/0618/checkpoint.pth --coco_path water_splash_dataset_2024 --output_dir output/0619 --lr_drop 400 --epochs 600
+```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
 To ease reproduction of our results we provide
@@ -264,6 +271,10 @@ Evaluate finetuned model with real dataset for (fish jump) example:
 ```
 python main.py --batch_size 2 --no_aux_loss --eval --resume output/0612/checkpoint.pth --coco_path fish_jump_dataset_2024 --AP_path output/0612/AP_summerize_real.txt
 ```
+Evaluate finetuned model with real dataset for (water splash) example:
+```
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0618/checkpoint.pth --coco_path water_splash_dataset_2024 --AP_path output/0618/AP_summerize_final.txt
+```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
 Note that numbers vary depending on batch size (number of images) per GPU.
@@ -285,6 +296,12 @@ Inference finetuned model with video for (fish jump) example:
 ```
 python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path fish_jump_dataset_2024/classes.txt
 ```
+Inference finetuned model with video for (water splash) example:
+```
+python main.py --inference_video --resume output/0618/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --classes_path water_splash_dataset_2024/classes.txt
+```
+
+
 
 ## Multinode training
 Distributed training is available via Slurm and [submitit](https://github.com/facebookincubator/submitit):
@@ -334,6 +351,10 @@ python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --mas
 Finetuning pretrained model for (fish jump) example:
 ```
 python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 10 --coco_path fish_jump_dataset_2024 --frozen_weights output/0612/checkpoint.pth --output_dir output/0613
+```
+Finetuning pretrained model for (water splash) example:
+```
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 150 --coco_path water_splash_dataset_2024 --frozen_weights output/0618/checkpoint.pth --output_dir output/seg-0618
 ```
 
 # License

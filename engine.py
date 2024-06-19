@@ -196,6 +196,10 @@ def draw_detections(frame, results, classes_path):
         labels = result['labels']  # Assuming there are labels
 
         for box, score, label in zip(boxes, scores, labels):
+            # print('box: ', box)
+            # print('score: ', score)
+            # print('label: ', label)
+            # print('-'*50)
             if score > 0.5:  # Threshold can be adjusted
                 label_name = LABELS.get(label.item(), "Unknown")  # Get the label name from the dictionary
                 cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
