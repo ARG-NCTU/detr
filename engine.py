@@ -159,6 +159,9 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
 ################## Inference functions ##################
 
+from torchvision import transforms
+import numpy as np
+
 def load_labels(file_path):
     with open(file_path, 'r') as file:
         labels = file.read().strip().split('\n')
@@ -166,11 +169,15 @@ def load_labels(file_path):
 
 @torch.no_grad()
 def preprocess(frame, device):
-    # Example preprocessing (adjust as needed)
-    # Convert frame to tensor, handle normalization, resizing, etc.
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Resize((800, 800)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    frame = torch.tensor(frame).float() / 255.0  # Normalize to [0, 1]
-    frame = frame.permute(2, 0, 1).unsqueeze(0).to(device)  # CHW format and add batch dimension
+    frame = transform(frame).unsqueeze(0).to(device)
+    # print("Input tensor shape:", frame.shape)
     return frame
 
 @torch.no_grad()
@@ -178,74 +185,92 @@ def perform_inference(frame, model, input_tensor, postprocessors, device):
     model.eval()
     with torch.no_grad():
         outputs = model(input_tensor)
-    
-    # Dummy targets for processing (if necessary)
+    # print("Model outputs:", outputs)
+
     targets = [{'orig_size': torch.tensor([frame.shape[0], frame.shape[1]]), 
                 'size': torch.tensor([input_tensor.shape[2], input_tensor.shape[3]])}]
-    # Process outputs
+    
     orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0).to(device)
     results = postprocessors['bbox'](outputs, orig_target_sizes)
-    return results
+    # print("Results:", results)
+    
+    if 'segm' in postprocessors.keys():
+        target_sizes = torch.stack([t["size"] for t in targets], dim=0)
+        segm_results = postprocessors['segm'](results, outputs, orig_target_sizes, target_sizes)
+        # print("Segmentation Results:", segm_results)
+        return results, segm_results
+    return results, None
 
-def draw_detections(frame, results, classes_path):
+def draw_detections(frame, results, segm_results, classes_path):
     LABELS = load_labels(classes_path)
-    # Example of results handling -- adjust based on your actual output structure
+    mask_image = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+
     for result in results:
-        boxes = result['boxes']  # Assuming the result dict contains 'boxes'
-        scores = result['scores']  # Assuming there are confidence scores
-        labels = result['labels']  # Assuming there are labels
+        boxes = result['boxes']
+        scores = result['scores']
+        labels = result['labels']
 
         for box, score, label in zip(boxes, scores, labels):
-            # print('box: ', box)
-            # print('score: ', score)
-            # print('label: ', label)
-            # print('-'*50)
-            if score > 0.5:  # Threshold can be adjusted
-                label_name = LABELS.get(label.item(), "Unknown")  # Get the label name from the dictionary
+            if score > 0.99:
+                # print('box:', box, 'score:', score, 'label:', label)
+                label_name = LABELS.get(label.item(), "Unknown")
                 cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
                 cv2.putText(frame, f'{label_name}: {score:.2f}', (int(box[0]), int(box[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
 
-    return frame
-    
+    if segm_results is not None:
+        for segm in segm_results:
+            masks = segm['masks']
+            scores = segm['scores']
+            labels = segm['labels']
+            for mask, score, label in zip(masks, scores, labels):
+                if score > 0.99:
+                    mask = mask.squeeze().cpu().numpy()
+                    mask_image[mask > 0.1] = 255
+                    contours, _ = cv2.findContours((mask > 0.1).astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+                    cv2.drawContours(frame, contours, -1, (0, 0, 255), 2)
+
+    return frame, mask_image
+
 @torch.no_grad()
 def image_inference(frame, model, postprocessors, device, classes_path):
     input_tensor = preprocess(frame, device)
-    results = perform_inference(frame, model, input_tensor, postprocessors, device)
-    frame = draw_detections(frame, results, classes_path)
-    return frame
+    results, segm_results = perform_inference(frame, model, input_tensor, postprocessors, device)
+    frame, mask_image = draw_detections(frame, results, segm_results, classes_path)
+    return frame, mask_image
 
 @torch.no_grad()
-def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path):
-    
+def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path, output_mask_video_path=None):
     cap = cv2.VideoCapture(input_video_path)
     if not cap.isOpened():
         print("Error opening video stream or file")
         return
 
-    # Get video properties
     frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     fps = cap.get(cv2.CAP_PROP_FPS)
 
-    # Define the codec and create VideoWriter object
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # Adjust codec as per your requirement
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
-
-    output_img_dir = os.path.join(os.path.dirname(output_video_path), os.path.basename(output_video_path).replace('.mp4', '') + '_images')
-    os.makedirs(output_img_dir, exist_ok=True)
+    if output_mask_video_path is not None:
+        out_mask = cv2.VideoWriter(output_mask_video_path, fourcc, fps, (frame_width, frame_height), isColor=False)
 
     count = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        frame = image_inference(frame, model, postprocessors, device, classes_path)
+        frame, mask_image = image_inference(frame, model, postprocessors, device, classes_path)
         out.write(frame)
+        if output_mask_video_path is not None:
+            out_mask.write(mask_image)
         
         if count % 100 == 0:
-            cv2.imwrite(os.path.join(output_img_dir, f'{count}.png'), frame)
+            cv2.imwrite(f'{output_video_path}_images/{count}.png', frame)
+            if output_mask_video_path is not None:
+                cv2.imwrite(f'{output_video_path}_images/{count}_mask.png', mask_image)
         count += 1
         
     cap.release()
     out.release()
-    # cv2.destroyAllWindows()
+    if output_mask_video_path is not None:
+        out_mask.release()

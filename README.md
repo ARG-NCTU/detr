@@ -237,10 +237,7 @@ python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --res
 ```
 Finetuning pretrained model for (water splash) example:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path water_splash_dataset_2024 --output_dir output/0618 --lr_drop 200 --epochs 300
-```
-```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume output/0618/checkpoint.pth --coco_path water_splash_dataset_2024 --output_dir output/0619 --lr_drop 400 --epochs 600
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path water_splash_dataset_2024 --output_dir output/bbox-0619 --lr_drop 200 --epochs 300
 ```
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
@@ -273,7 +270,7 @@ python main.py --batch_size 2 --no_aux_loss --eval --resume output/0612/checkpoi
 ```
 Evaluate finetuned model with real dataset for (water splash) example:
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/0618/checkpoint.pth --coco_path water_splash_dataset_2024 --AP_path output/0618/AP_summerize_final.txt
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/bbox-0619/checkpoint.pth --coco_path water_splash_dataset_2024 --AP_path output/bbox-0619/AP_summerize_final.txt
 ```
 We provide results for all DETR detection models in this
 [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
@@ -298,9 +295,8 @@ python main.py --inference_video --resume output/0612/checkpoint.pth --input_vid
 ```
 Inference finetuned model with video for (water splash) example:
 ```
-python main.py --inference_video --resume output/0618/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --classes_path water_splash_dataset_2024/classes.txt
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --inference_video --resume output/seg-0619-epoch55/checkpoint0050.pth --frozen_weights output/seg-0619-epoch55/checkpoint0050.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt
 ```
-
 
 
 ## Multinode training
@@ -354,7 +350,7 @@ python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --mas
 ```
 Finetuning pretrained model for (water splash) example:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 150 --coco_path water_splash_dataset_2024 --frozen_weights output/0618/checkpoint.pth --output_dir output/seg-0618
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --resume output/seg-0619-epoch50/checkpoint.pth --epochs 55 --coco_path water_splash_dataset_2024 --frozen_weights output/bbox-0619/checkpoint.pth --output_dir output/seg-0619-epoch55
 ```
 
 # License

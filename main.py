@@ -117,6 +117,7 @@ def get_args_parser():
     parser.add_argument('--inference_video', action='store_true', help='Run inference on a video file')
     parser.add_argument('--input_video_path', type=str, help='Input video file path for inference')
     parser.add_argument('--output_video_path', default='output.mp4', help='Output video file path for inference')
+    parser.add_argument('--output_mask_video_path', default=None, help='Output mask video file path for inference')
     
     return parser
 
@@ -125,7 +126,7 @@ def load_model_state(model, checkpoint):
     model_dict = model.state_dict()
     pretrained_dict = {k: v for k, v in checkpoint['model'].items() if k in model_dict and model_dict[k].size() == v.size()}
     model_dict.update(pretrained_dict)  # update the existing model state dictionary with pretrained weights
-    model.load_state_dict(model_dict)
+    model.load_state_dict(model_dict, strict=False)
     print("Loaded model weights with selective layer loading.")
 
 def main(args):
@@ -174,7 +175,7 @@ def main(args):
                 sys.exit(1)
             
             # Run inference on video
-            video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path)
+            video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path, args.output_mask_video_path)
             return
 
     model_without_ddp = model
@@ -257,8 +258,9 @@ def main(args):
         if args.output_dir:
             checkpoint_paths = [output_dir / 'checkpoint.pth']
             # extra checkpoint before LR drop and every 100 epochs
-            if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 100 == 0:
-                checkpoint_paths.append(output_dir / f'checkpoint{epoch:04}.pth')
+            # if (epoch + 1) % args.lr_drop == 0 or (epoch + 1) % 100 == 0:
+            #     checkpoint_paths.append(output_dir / f'checkpoint{epoch:04}.pth')
+            checkpoint_paths.append(output_dir / f'checkpoint{epoch:04}.pth')
             for checkpoint_path in checkpoint_paths:
                 utils.save_on_master({
                     'model': model_without_ddp.state_dict(),
