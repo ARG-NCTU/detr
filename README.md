@@ -218,8 +218,17 @@ We expect the directory structure to be the following:
 ```
 fish_jump_dataset_2024/
   annotations/  # annotation json files
-  train2023/    # train images
-  val2023/      # val images
+  train2024/    # train images
+  val2024/      # val images
+```
+Download and extract water splash 874 train and 223 val images with annotations from
+[NAS](http://gofile.me/773h8/9OwlYYctD) for finetuning.
+We expect the directory structure to be the following:
+```
+water_splash_dataset_2024/
+  annotations/  # annotation json files
+  train2024/    # train images
+  val2024/      # val images
 ```
 
 ## 4. Training
@@ -280,6 +289,9 @@ so DC5 models show a significant drop in AP if evaluated with more
 than 1 image per GPU.
 
 ## 6. Inference
+Download and extract fish jumping and water splashing source video from [NAS](http://gofile.me/773h8/9xKolbFgp)
+
+
 Inference finetuned model with image for example:
 ```
 python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/wam-v.jpeg --output_image_path output_image/wam-v_out.jpg --classes_path Boat_dataset/classes.txt
@@ -293,9 +305,9 @@ Inference finetuned model with video for (fish jump) example:
 ```
 python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path fish_jump_dataset_2024/classes.txt
 ```
-Inference finetuned model with video for (water splash) example:
+Inference finetuned bbox + segm model with video for (water splash) example:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --inference_video --resume output/seg-0619-epoch55/checkpoint0050.pth --frozen_weights output/seg-0619-epoch55/checkpoint0050.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt
 ```
 
 
@@ -350,7 +362,7 @@ python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --mas
 ```
 Finetuning pretrained model for (water splash) example:
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --resume output/seg-0619-epoch50/checkpoint.pth --epochs 55 --coco_path water_splash_dataset_2024 --frozen_weights output/bbox-0619/checkpoint.pth --output_dir output/seg-0619-epoch55
+python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 55 --coco_path water_splash_dataset_2024 --frozen_weights output/bbox-0619/checkpoint.pth --output_dir output/seg-0619
 ```
 
 # License
