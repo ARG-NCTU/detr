@@ -161,6 +161,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
 
 from torchvision import transforms
 import numpy as np
+import time
 
 def load_labels(file_path):
     with open(file_path, 'r') as file:
@@ -234,8 +235,13 @@ def draw_detections(frame, results, segm_results, classes_path):
 @torch.no_grad()
 def image_inference(frame, model, postprocessors, device, classes_path):
     input_tensor = preprocess(frame, device)
+    start_time = time.time()  # Start FPS counting time
     results, segm_results = perform_inference(frame, model, input_tensor, postprocessors, device)
+    end_time = time.time()    # End FPS counting time
     frame, mask_image = draw_detections(frame, results, segm_results, classes_path)
+    inference_time = end_time - start_time
+    current_fps = 1 / inference_time
+    cv2.putText(frame, f'FPS: {current_fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
     return frame, mask_image
 
 @torch.no_grad()
