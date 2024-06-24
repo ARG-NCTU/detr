@@ -202,7 +202,7 @@ def perform_inference(frame, model, input_tensor, postprocessors, device):
         return results, segm_results
     return results, None
 
-def draw_detections(frame, results, segm_results, classes_path):
+def draw_detections(frame, results, segm_results, classes_path, confidence_threshold):
     LABELS = load_labels(classes_path)
     mask_image = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
@@ -212,7 +212,7 @@ def draw_detections(frame, results, segm_results, classes_path):
         labels = result['labels']
 
         for box, score, label in zip(boxes, scores, labels):
-            if score > 0.99:
+            if score > confidence_threshold:
                 # print('box:', box, 'score:', score, 'label:', label)
                 label_name = LABELS.get(label.item(), "Unknown")
                 cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
@@ -224,7 +224,7 @@ def draw_detections(frame, results, segm_results, classes_path):
             scores = segm['scores']
             labels = segm['labels']
             for mask, score, label in zip(masks, scores, labels):
-                if score > 0.99:
+                if score > confidence_threshold:
                     mask = mask.squeeze().cpu().numpy()
                     mask_image[mask > 0.1] = 255
                     contours, _ = cv2.findContours((mask > 0.1).astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -233,19 +233,19 @@ def draw_detections(frame, results, segm_results, classes_path):
     return frame, mask_image
 
 @torch.no_grad()
-def image_inference(frame, model, postprocessors, device, classes_path):
+def image_inference(frame, model, postprocessors, device, classes_path, confidence_threshold=0.95):
     input_tensor = preprocess(frame, device)
     start_time = time.time()  # Start FPS counting time
     results, segm_results = perform_inference(frame, model, input_tensor, postprocessors, device)
     end_time = time.time()    # End FPS counting time
-    frame, mask_image = draw_detections(frame, results, segm_results, classes_path)
+    frame, mask_image = draw_detections(frame, results, segm_results, classes_path, confidence_threshold)
     inference_time = end_time - start_time
     current_fps = 1 / inference_time
     cv2.putText(frame, f'FPS: {current_fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
     return frame, mask_image
 
 @torch.no_grad()
-def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path, output_mask_video_path=None):
+def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path, output_mask_video_path=None, confidence_threshold=0.95):
     cap = cv2.VideoCapture(input_video_path)
     if not cap.isOpened():
         print("Error opening video stream or file")
@@ -265,7 +265,7 @@ def video_inference(input_video_path, model, postprocessors, device, output_vide
         ret, frame = cap.read()
         if not ret:
             break
-        frame, mask_image = image_inference(frame, model, postprocessors, device, classes_path)
+        frame, mask_image = image_inference(frame, model, postprocessors, device, classes_path, confidence_threshold)
         out.write(frame)
         if output_mask_video_path is not None:
             out_mask.write(mask_image)

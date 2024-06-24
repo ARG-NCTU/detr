@@ -108,6 +108,7 @@ def get_args_parser():
     parser.add_argument('--AP_path', default='output/AP_summerize.txt', type=str, help='path to save AP result')
     
     # Inference parameters
+    parser.add_argument('--confidence_thershold', default=0.95, type=float, help='Confidence threshold for inference')
     parser.add_argument('--inference_image', action='store_true', help='Run inference on a image file')
     parser.add_argument('--input_image_path', type=str, help='Input image file path for inference')
     parser.add_argument('--output_image_path', default='output.jpg', help='Output image file path for inference')
@@ -164,7 +165,7 @@ def main(args):
             
             # Run inference on image
             image = cv2.imread(args.input_image_path)
-            out_image = image_inference(image, model, postprocessors, device, args.classes_path)
+            out_image = image_inference(image, model, postprocessors, device, args.classes_path, args.confidence_thershold)
             cv2.imwrite(args.output_image_path, out_image)
             return
         
@@ -175,7 +176,7 @@ def main(args):
                 sys.exit(1)
             
             # Run inference on video
-            video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path, args.output_mask_video_path)
+            video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path, args.output_mask_video_path, args.confidence_thershold)
             return
 
     model_without_ddp = model
