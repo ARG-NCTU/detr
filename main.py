@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader, DistributedSampler
 import sys
 import cv2
+import os
 
 import datasets
 import util.misc as utils
@@ -22,6 +23,7 @@ from models import build_model
 def get_args_parser():
     parser = argparse.ArgumentParser('Set transformer detector', add_help=False)
     parser.add_argument('--lr', default=1e-4, type=float)
+    parser.add_argument('--lr_reset', default=False, type=bool)
     parser.add_argument('--lr_backbone', default=1e-5, type=float)
     parser.add_argument('--batch_size', default=2, type=int)
     parser.add_argument('--weight_decay', default=1e-4, type=float)
@@ -108,12 +110,12 @@ def get_args_parser():
     parser.add_argument('--AP_path', default='output/AP_summerize.txt', type=str, help='path to save AP result')
     
     # Inference parameters
-    parser.add_argument('--confidence_thershold', default=0.95, type=float, help='Confidence threshold for inference')
+    parser.add_argument('--confidence_thershold', default=0.5, type=float, help='Confidence threshold for inference')
     parser.add_argument('--inference_image', action='store_true', help='Run inference on a image file')
     parser.add_argument('--input_image_path', type=str, help='Input image file path for inference')
     parser.add_argument('--output_image_path', default='output.jpg', help='Output image file path for inference')
     
-    parser.add_argument('--classes_path', default='Boat_dataset/classes.txt', help='Classes file path for inference')
+    parser.add_argument('--classes_path', default='Kaohsiung_Port_dataset/annotations/classes.txt', help='Classes file path for inference')
     
     parser.add_argument('--inference_video', action='store_true', help='Run inference on a video file')
     parser.add_argument('--input_video_path', type=str, help='Input video file path for inference')
@@ -176,6 +178,7 @@ def main(args):
                 sys.exit(1)
             
             # Run inference on video
+            os.makedirs(os.path.dirname(args.output_video_path), exist_ok=True)
             video_inference(args.input_video_path, model, postprocessors, device, args.output_video_path, args.classes_path, args.output_mask_video_path, args.confidence_thershold)
             return
 
@@ -250,6 +253,15 @@ def main(args):
     print("Start training")
     start_time = time.time()
     for epoch in range(args.start_epoch, args.epochs):
+        
+        # Reset learning rate here
+        if args.lr_reset:
+            for param_group in optimizer.param_groups:
+                if "lr" in param_group:
+                    param_group['lr'] = args.lr
+                if "backbone" in param_group:
+                    param_group['lr'] = args.lr_backbone
+    
         if args.distributed:
             sampler_train.set_epoch(epoch)
         train_stats = train_one_epoch(
@@ -289,7 +301,7 @@ def main(args):
                 (output_dir / 'eval').mkdir(exist_ok=True)
                 if "bbox" in coco_evaluator.coco_eval:
                     filenames = ['latest.pth']
-                    if epoch % 50 == 0:
+                    if epoch % 5 == 0:
                         filenames.append(f'{epoch:03}.pth')
                     for name in filenames:
                         torch.save(coco_evaluator.coco_eval["bbox"].eval,
