@@ -206,6 +206,14 @@ def draw_detections(frame, results, segm_results, classes_path, confidence_thres
     LABELS = load_labels(classes_path)
     mask_image = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
 
+    # Define colors for each class
+    COLORS = {
+        'Civilian_ship': (0, 0, 255),  # Red
+        'Buoy': (57, 255, 20),         # Neon Green
+        'Warship': (0, 0, 0),          # Black
+        'Coast_guard': (255, 0, 0)     # Blue
+    }
+
     for result in results:
         boxes = result['boxes']
         scores = result['scores']
@@ -213,10 +221,12 @@ def draw_detections(frame, results, segm_results, classes_path, confidence_thres
 
         for box, score, label in zip(boxes, scores, labels):
             if score > confidence_threshold:
-                # print('box:', box, 'score:', score, 'label:', label)
                 label_name = LABELS.get(label.item(), "Unknown")
-                cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), (0, 255, 0), 2)
-                cv2.putText(frame, f'{label_name}: {score:.2f}', (int(box[0]), int(box[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                color = COLORS.get(label_name, (0, 255, 0))  # Default color if label not in COLORS
+
+                # Draw rectangle and label text with specified color
+                cv2.rectangle(frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), color, 2)
+                cv2.putText(frame, f'{label_name}: {score:.2f}', (int(box[0]), int(box[1])-10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
     if segm_results is not None:
         for segm in segm_results:
@@ -225,24 +235,158 @@ def draw_detections(frame, results, segm_results, classes_path, confidence_thres
             labels = segm['labels']
             for mask, score, label in zip(masks, scores, labels):
                 if score > confidence_threshold:
+                    label_name = LABELS.get(label.item(), "Unknown")
+                    color = COLORS.get(label_name, (0, 0, 255))  # Default to red for masks if label not in COLORS
+
+                    # Apply mask and contours
                     mask = mask.squeeze().cpu().numpy()
                     mask_image[mask > 0.1] = 255
                     contours, _ = cv2.findContours((mask > 0.1).astype(np.uint8), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-                    cv2.drawContours(frame, contours, -1, (0, 0, 255), 2)
+                    cv2.drawContours(frame, contours, -1, color, 2)
 
+    return frame, mask_image
+
+
+@torch.no_grad()
+def padding_image(image, target_ratio):
+    h, w = image.shape[:2]
+    aspect_ratio_image = w / h
+    pad_x, pad_y = 0, 0  # Initialize padding variables
+
+    # Determine padding needed based on target ratio
+    if aspect_ratio_image > target_ratio:
+        new_h = int(w / target_ratio)
+        pad_y = (new_h - h) // 2
+        image = cv2.copyMakeBorder(image, pad_y, new_h - h - pad_y, 0, 0, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+    else:
+        new_w = int(h * target_ratio)
+        pad_x = (new_w - w) // 2
+        image = cv2.copyMakeBorder(image, 0, 0, pad_x, new_w - w - pad_x, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+
+    return image, pad_x, pad_y
+
+
+@torch.no_grad()
+def depadding_image(image, target_ratio):
+    h, w = image.shape[:2]
+    aspect_ratio_image = w / h
+
+    # 如果圖片的寬高比大於目標寬高比，則裁剪左右邊；否則裁剪上下邊
+    if aspect_ratio_image > target_ratio:
+        # Crop left and right
+        new_w = int(h * target_ratio)
+        start_w = (w - new_w) // 2
+        image = image[:, start_w:start_w + new_w]
+    elif aspect_ratio_image < target_ratio:
+        # Crop top and bottom
+        new_h = int(w / target_ratio)
+        start_h = (h - new_h) // 2
+        image = image[start_h:start_h + new_h, :]
+    
+    return image
+
+
+@torch.no_grad()
+def bboxes_proprocessing(bboxes, original_size, depadded_size, target_size, pad_x, pad_y):
+    """
+    Adjust bounding boxes based on resizing and depadding steps.
+    - `original_size`: (height, width) of the original image
+    - `depadded_size`: (height, width) of the image after depadding
+    - `target_size`: (height, width) of the image after padding and resizing to target size
+    - `pad_x`, `pad_y`: padding applied to width and height, respectively
+    """
+    # Ensure bboxes are float and reshaped correctly
+    bboxes = bboxes.float().reshape(-1, 4)
+    
+    # Step 1: Adjust for the resizing to the target_size
+    scale_x = depadded_size[1] / target_size[1]
+    scale_y = depadded_size[0] / target_size[0]
+    bboxes[:, [0, 2]] *= scale_x
+    bboxes[:, [1, 3]] *= scale_y
+    
+    # Step 2: Reverse the depadding by removing padding offsets
+    bboxes[:, [0, 2]] -= pad_x
+    bboxes[:, [1, 3]] -= pad_y
+
+    # Clip to ensure bboxes are within original image bounds
+    bboxes[:, 0] = bboxes[:, 0].clamp(0, original_size[1])
+    bboxes[:, 1] = bboxes[:, 1].clamp(0, original_size[0])
+    bboxes[:, 2] = bboxes[:, 2].clamp(0, original_size[1])
+    bboxes[:, 3] = bboxes[:, 3].clamp(0, original_size[0])
+
+    return bboxes
+
+@torch.no_grad()
+def image_inference_test(frame, model, postprocessors, device, classes_path, confidence_threshold=0.5):
+    original_size = (frame.shape[0], frame.shape[1])
+    # print("Original frame shape:", frame.shape)
+    target_ratio = 800 / 800
+    frame, pad_x, pad_y = padding_image(frame, target_ratio)
+    # print("Padded frame shape:", frame.shape)
+    padded_size = (frame.shape[0], frame.shape[1])
+    frame = cv2.resize(frame, (800, 800))
+
+    # Simulate results
+    results = [{'boxes': torch.tensor([[380, 380, 420, 420]]), 'scores': torch.tensor([0.99]), 'labels': torch.tensor([0])}]
+    segm_results = None
+
+    # Ensure results[0]['boxes'] is processed as 2D tensor
+    results[0]['boxes'] = bboxes_proprocessing(results[0]['boxes'], original_size, padded_size, (800, 800), pad_x, pad_y)
+    
+    # Depadding and resizing
+    frame = cv2.resize(frame, padded_size)
+    target_ratio = original_size[1] / original_size[0]
+    frame = depadding_image(frame, target_ratio)
+
+    # Draw detections
+    frame, mask_image = draw_detections(frame, results, segm_results, classes_path, confidence_threshold)
+
+    # Dummy FPS calculation
+    inference_time = 1  # Dummy time, replace with actual if needed
+    current_fps = 1 / inference_time
+    cv2.putText(frame, f'FPS: {current_fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+    
     return frame, mask_image
 
 @torch.no_grad()
-def image_inference(frame, model, postprocessors, device, classes_path, confidence_threshold=0.95):
+def image_inference(frame, model, postprocessors, device, classes_path, confidence_threshold=0.5):
+    frame_out = frame.copy()
+    original_size = (frame.shape[0], frame.shape[1])
+    # print("Original frame shape:", frame.shape)
+    target_ratio = 800 / 800
+    frame, pad_x, pad_y = padding_image(frame, target_ratio)
+    # print("Padded frame shape:", frame.shape)
+    padded_size = (frame.shape[0], frame.shape[1])
+    frame = cv2.resize(frame, (800, 800))
+    
     input_tensor = preprocess(frame, device)
-    start_time = time.time()  # Start FPS counting time
+    start_time = time.time()
     results, segm_results = perform_inference(frame, model, input_tensor, postprocessors, device)
-    end_time = time.time()    # End FPS counting time
-    frame, mask_image = draw_detections(frame, results, segm_results, classes_path, confidence_threshold)
+    end_time = time.time()
+    
+    # Ensure results[0]['boxes'] is processed as 2D tensor
+    results[0]['boxes'] = bboxes_proprocessing(results[0]['boxes'], original_size, padded_size, (800, 800), pad_x, pad_y)
+
+    # Ensure `boxes` is 2D for drawing detections
+    if results[0]['boxes'].dim() == 1:
+        results[0]['boxes'] = results[0]['boxes'].unsqueeze(0)
+    
+    # # Depadding and resizing
+    # frame = cv2.resize(frame, padded_size)
+    # target_ratio = original_size[1] / original_size[0]
+    # frame = depadding_image(frame, target_ratio)
+    
+    # Draw detections on the depadded frame
+    frame, mask_image = draw_detections(frame_out, results, segm_results, classes_path, confidence_threshold)
+    
+    # Calculate and display FPS
     inference_time = end_time - start_time
     current_fps = 1 / inference_time
     cv2.putText(frame, f'FPS: {current_fps:.2f}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2)
+    
     return frame, mask_image
+
+
 
 @torch.no_grad()
 def video_inference(input_video_path, model, postprocessors, device, output_video_path, classes_path, output_mask_video_path=None, confidence_threshold=0.95):
@@ -260,12 +404,15 @@ def video_inference(input_video_path, model, postprocessors, device, output_vide
     if output_mask_video_path is not None:
         out_mask = cv2.VideoWriter(output_mask_video_path, fourcc, fps, (frame_width, frame_height), isColor=False)
 
+    count_max = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     count = 0
     while cap.isOpened():
+        print(f'Processing frame {count}/{count_max}', end="\r")
         ret, frame = cap.read()
         if not ret:
             break
         frame, mask_image = image_inference(frame, model, postprocessors, device, classes_path, confidence_threshold)
+        # frame, mask_image = image_inference_test(frame, model, postprocessors, device, classes_path, confidence_threshold)
         out.write(frame)
         if output_mask_video_path is not None:
             out_mask.write(mask_image)
