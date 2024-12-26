@@ -341,9 +341,8 @@ so DC5 models show a significant drop in AP if evaluated with more
 than 1 image per GPU.
 
 ## 6. Inference
-Download and extract all trained models weight
-wget --ftp-user=your_username --ftp-password=your_password ftp://140.113.148.83:5001/arg-projectfile-download/DETR/output.zip
 
+Download and extract all trained models weight
 ```bash
 wget ftp://140.113.148.83/arg-projectfile-download/DETR/output.zip
 unzip output.zip
@@ -354,14 +353,36 @@ wget ftp://140.113.148.83/arg-projectfile-download/DETR/source_video.zip
 unzip source_video.zip
 ```
 
+If you are using JetSeaAI local network
+```bash
+ftp 192.168.0.2
+```
+Ask Administor of JetSeaAI to get NAS account for ftp downloading.
+Then get model weights and source videos zip files
+```bash
+cd DETR
+get output.zip /home/user/detr/output.zip
+get source_video.zip /home/user/detr/source_video.zip
+```
+Unzip files
+```bash
+unzip output.zip
+unzip source_video.zip
+```
+Remove zip files
+```bash
+rm output.zip
+rm source_video.zip
+```
+
 Inference finetuned model with **virtual boat & real WAM-V** image for example:
 ```bash
-python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/WamV.jpg --output_image_path output_image/WamV_out.jpg --classes_path Boat_dataset/classes.txt
+python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/WamV.jpg --output_image_path output_image/WamV_out.jpg --classes_path classes.txt
 ```
 
 Inference finetuned model with **virtual boat & real WAM-V** video for example:
 ```bash
-python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path example_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
+python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path classes.txt
 ```
 
 Inference finetuned model with **real boat** video for example:
