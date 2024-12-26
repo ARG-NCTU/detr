@@ -1,0 +1,1 @@
+docker pull argnctu/detr:gpu
