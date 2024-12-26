@@ -169,6 +169,11 @@ If you have no ssh key, you can also clone with https:
 git clone https://github.com/ARG-NCTU/detr.git
 ```
 
+Enter the repo
+```bash
+cd detr
+```
+
 ## 2. With Docker (recommended)
 Install and run the docker image on desktop or laptop computer.
 ```bash
