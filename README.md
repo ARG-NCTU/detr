@@ -377,27 +377,27 @@ rm source_video.zip
 
 Inference finetuned model with **virtual boat & real WAM-V** image for example:
 ```bash
-python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/WamV.jpg --output_image_path output_image/WamV_out.jpg --classes_path classes.txt
+python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/WamV.jpg --output_image_path output_image/WamV_out.jpg --classes_path classes/boat_classes.txt
 ```
 
 Inference finetuned model with **virtual boat & real WAM-V** video for example:
 ```bash
-python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path classes.txt
+python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path classes/boat_classes.txt
 ```
 
 Inference finetuned model with **real boat** video for example:
 ```bash
-python main.py --inference_video --resume output/boat-1104-600-epochs/checkpoint0672.pth --input_video_path source_video/kaohsiung_port1.mp4 --output_video_path output_video/kaohsiung_port1_out.mp4 --classes_path Kaohsiung_Port_dataset/annotations/classes.txt --confidence_thershold 0.8
+python main.py --inference_video --resume output/boat-1104-600-epochs/checkpoint0672.pth --input_video_path source_video/kaohsiung_port1.mp4 --output_video_path output_video/kaohsiung_port1_out.mp4 --classes_path classes/Kaohsiung_Port_classes.txt --confidence_thershold 0.8
 ```
 
 Inference finetuned model with video for **fish jump** example:
 ```bash
-python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path fish_jump_dataset_2024/classes.txt
+python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path classes/fish_jump_classes.txt
 ```
 
 Inference finetuned bbox + segm model with video for **water splash** example:
 ```bash
-python main.py --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt --confidence_thershold 0.95
+python main.py --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path classes/water_splash_classes.txt --confidence_thershold 0.95
 ```
 
 If you are using JetSeaAI local network
