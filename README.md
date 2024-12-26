@@ -342,6 +342,8 @@ than 1 image per GPU.
 
 ## 6. Inference
 Download and extract all trained models weight
+wget --ftp-user=your_username --ftp-password=your_password ftp://140.113.148.83:5001/arg-projectfile-download/DETR/output.zip
+
 ```bash
 wget ftp://140.113.148.83/arg-projectfile-download/DETR/output.zip
 unzip output.zip
@@ -359,7 +361,7 @@ python main.py --inference_image --resume output/0328/checkpoint_0328.pth --inpu
 
 Inference finetuned model with **virtual boat & real WAM-V** video for example:
 ```bash
-python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
+python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path example_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
 ```
 
 Inference finetuned model with **real boat** video for example:
