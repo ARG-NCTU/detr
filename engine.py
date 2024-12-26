@@ -271,7 +271,7 @@ def depadding_image(image, target_ratio):
     h, w = image.shape[:2]
     aspect_ratio_image = w / h
 
-    # 如果圖片的寬高比大於目標寬高比，則裁剪左右邊；否則裁剪上下邊
+    # Depad image based on target aspect ratio
     if aspect_ratio_image > target_ratio:
         # Crop left and right
         new_w = int(h * target_ratio)

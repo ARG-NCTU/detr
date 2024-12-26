@@ -203,28 +203,41 @@ path/to/coco/
   train2017/    # train images
   val2017/      # val images
 ```
-Download and extract real & virtual Boat 42.8k train and 5.4k val images with annotations from
-[NAS](http://gofile.me/773h8/XDwnn8WOo) for finetuning.
+
+Download and extract real WAM-V & virtual Boat 42.8k train and 5.4k val images with annotations from
+[NAS](http://gofile.me/773h8/MMJGG8Hlf) for finetuning.
 We expect the directory structure to be the following:
-```
+```bash
 Boat_dataset/
   annotations/  # annotation json files
-  train2023/    # train images
-  val2023/      # val images
+  train2024/    # train images
+  val2024/      # val images
 ```
+
+Download and extract real Boat 601 train and 150 images with annotations from
+[NAS](http://gofile.me/773h8/Ee9MzWmAJ) for finetuning.
+We expect the directory structure to be the following:
+```bash
+Kaohsiung_Port_dataset/
+  annotations/  # annotation json files
+  train2024/    # train images
+  val2024/      # val images
+```
+
 Download and extract fish jump 1.7k train and 434 val images with annotations from
 [NAS](http://gofile.me/773h8/YMUwyBpjN) for finetuning.
 We expect the directory structure to be the following:
-```
+```bash
 fish_jump_dataset_2024/
   annotations/  # annotation json files
   train2024/    # train images
   val2024/      # val images
 ```
+
 Download and extract water splash 874 train and 223 val images with annotations from
 [NAS](http://gofile.me/773h8/9OwlYYctD) for finetuning.
 We expect the directory structure to be the following:
-```
+```bash
 water_splash_dataset_2024/
   annotations/  # annotation json files
   train2024/    # train images
@@ -233,21 +246,35 @@ water_splash_dataset_2024/
 
 ## 4. Training
 To train baseline DETR on a single node with 8 gpus for 300 epochs run:
-```
+```bash
 python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco 
 ```
-Finetuning pretrained model for (boat) example (more arguments setting is in main.py):
+
+Finetuning pretrained model with (virtual boat & real WAM-V) dataset for example (more arguments setting is in main.py):
+```bash
+python main.py --resume pretrained_models/detr-r50-pretrained.pth --coco_path Kaohsiung_Port_dataset --output_dir output/boat-1115-600-epochs --lr_drop 300 --epochs 600
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path Boat_dataset --output_dir output/boat-0612 --lr_drop 5 --epochs 20
+
+Finetuning pretrained model with (real boat) dataset for example (more arguments setting is in main.py):
+```bash
+python main.py --resume pretrained_models/detr-r50-pretrained.pth --coco_path Kaohsiung_Port_dataset --output_dir output/boat-1115-600-epochs --lr_drop 300 --epochs 600
 ```
-Finetuning pretrained model for (fish jump) example:
+
+Second finetuning pretrained model with (real boat) dataset for example (more arguments setting is in main.py):
+```bash
+python main.py --resume output/boat-1107-1000-epochs/checkpoint0642.pth --coco_path Kaohsiung_Port_dataset --output_dir output/boat-1107-1000-epochs --lr_drop 600 --epochs 1000 --lr_reset True
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path fish_jump_dataset_2024 --output_dir output/0612 --lr_drop 5 --epochs 20
+
+Finetuning pretrained model with (fish jump) dataset for example:
+```bash
+python main.py --resume pretrained_models/detr-r50-pretrained.pth --coco_path fish_jump_dataset_2024 --output_dir output/0612 --lr_drop 5 --epochs 20
 ```
-Finetuning pretrained model for (water splash) example:
+
+Finetuning pretrained model with (water splash) dataset for example:
+```bash
+python main.py --resume pretrained_models/detr-r50-pretrained.pth --coco_path water_splash_dataset_2024 --output_dir output/bbox-0619 --lr_drop 200 --epochs 300
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --resume pretrained_models/detr-r50-pretrained.pth --coco_path water_splash_dataset_2024 --output_dir output/bbox-0619 --lr_drop 200 --epochs 300
-```
+
 A single epoch takes 28 minutes, so 300 epoch training
 takes around 6 days on a single machine with 8 V100 cards.
 To ease reproduction of our results we provide
@@ -262,23 +289,27 @@ The transformer is trained with dropout of 0.1, and the whole model is trained w
 
 ## 5. Evaluation
 To evaluate DETR R50 on COCO val5k with a single GPU run:
-```
+```bash
 python main.py --batch_size 2 --no_aux_loss --eval --resume https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth --coco_path /path/to/coco
 ```
-Evaluate finetuned model with real & virtual dataset for example:
+
+Evaluate finetuned model with (virtual boat & real WAM-V) dataset for example:
+```bash 
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint.pth --coco_path Boat_dataset --AP_path output/0328/AP_summerize.txt
 ```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint.pth --coco_path Boat_dataset --AP_path output/AP_summerize.txt
+
+Evaluate finetuned model with (real boat) dataset for example:
+```bash
+python main.py --batch_size 2 --no_aux_loss --eval --resume output/boat-1107-1000-epochs/checkpoint0642.pth --coco_path Kaohsiung_Port_dataset --AP_path output/boat-1107-1000-epochs/AP_summerize.txt
 ```
-Evaluate finetuned model with real dataset for (boat) example:
-```
-python main.py --batch_size 2 --no_aux_loss --eval --resume output/0328/checkpoint.pth --coco_path Boat_dataset --AP_path output/0328/AP_summerize_real.txt
-```
-Evaluate finetuned model with real dataset for (fish jump) example:
-```
+
+Evaluate finetuned model with (fish jump) dataset for example:
+```bash
 python main.py --batch_size 2 --no_aux_loss --eval --resume output/0612/checkpoint.pth --coco_path fish_jump_dataset_2024 --AP_path output/0612/AP_summerize_real.txt
 ```
-Evaluate finetuned model with real dataset for (water splash) example:
-```
+
+Evaluate finetuned model with (water splash) dataset for example:
+```bash
 python main.py --batch_size 2 --no_aux_loss --eval --resume output/bbox-0619/checkpoint.pth --coco_path water_splash_dataset_2024 --AP_path output/bbox-0619/AP_summerize_final.txt
 ```
 We provide results for all DETR detection models in this
@@ -292,22 +323,29 @@ than 1 image per GPU.
 Download and extract fish jumping and water splashing source video from [NAS](http://gofile.me/773h8/9xKolbFgp)
 
 
-Inference finetuned model with image for example:
-```
+Inference finetuned model with (virtual boat & real WAM-V) image for example:
+```bash
 python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/wam-v.jpeg --output_image_path output_image/wam-v_out.jpg --classes_path Boat_dataset/classes.txt
 ```
 
-Inference finetuned model with video for (boat) example:
-```
+Inference finetuned model with (virtual boat & real WAM-V) video for example:
+```bash
 python main.py --inference_video --resume output/0328/checkpoint_0328.pth --input_video_path source_video/WAM_V_1.mp4 --output_video_path output_video/WAM_V_1_out.mp4 --classes_path Boat_dataset/classes.txt
 ```
-Inference finetuned model with video for (fish jump) example:
+
+Inference finetuned model with (real boat) video for example:
+```bash
+python main.py --inference_video --resume output/boat-1104-600-epochs/checkpoint0672.pth --input_video_path source_video/kaohsiung_port1.mp4 --output_video_path output_video/kaohsiung_port1_out.mp4 --classes_path Kaohsiung_Port_dataset/annotations/classes.txt --confidence_thershold 0.8
 ```
+
+Inference finetuned model with video for (fish jump) example:
+```bash
 python main.py --inference_video --resume output/0612/checkpoint.pth --input_video_path source_video/flow_1.mp4 --output_video_path output_video/flow_1_out.mp4 --classes_path fish_jump_dataset_2024/classes.txt
 ```
+
 Inference finetuned bbox + segm model with video for (water splash) example:
-```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt --confidence_thershold 0.95
+```bash
+python main.py --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt --confidence_thershold 0.95
 ```
 
 
@@ -352,17 +390,17 @@ python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --masks 
 ```
 For instance segmentation only, simply remove the `dataset_file` and `coco_panoptic_path` arguments from the above command line.
 
-Finetuning pretrained model for (boat) example (more arguments setting is in main.py):
+Finetuning pretrained model with (virtual boat & real WAM-V) dataset for example (more arguments setting is in main.py):
+```bash 
+python main.py --masks --epochs 10 --coco_path Boat_dataset --frozen_weights output/0328/checkpoint.pth --output_dir output/0613
 ```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 10 --coco_path Boat_dataset --frozen_weights output/0328/checkpoint.pth --output_dir output/0613
+Finetuning pretrained model with (fish jump) dataset for example:
+```bash
+python main.py --masks --epochs 10 --coco_path fish_jump_dataset_2024 --frozen_weights output/0612/checkpoint.pth --output_dir output/0613
 ```
-Finetuning pretrained model for (fish jump) example:
-```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 10 --coco_path fish_jump_dataset_2024 --frozen_weights output/0612/checkpoint.pth --output_dir output/0613
-```
-Finetuning pretrained model for (water splash) example:
-```
-python -m torch.distributed.launch --nproc_per_node=1 --use_env main.py -- --masks --epochs 55 --coco_path water_splash_dataset_2024 --frozen_weights output/bbox-0619/checkpoint.pth --output_dir output/seg-0619
+Finetuning pretrained model with (water splash) dataset for example:
+```bash
+python main.py --masks --epochs 55 --coco_path water_splash_dataset_2024 --frozen_weights output/bbox-0619/checkpoint.pth --output_dir output/seg-0619
 ```
 
 # License

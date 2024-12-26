@@ -27,3 +27,8 @@ output_video/
 pretrained_models/
 fish_jump_dataset_2024/
 water_splash_dataset_2024/
+Kaohsiung_Port_dataset/
+Tainan_Lifebuoy_dataset/
+Tainan_Lifebuoy_dataset_backup/
+source_video_backup/
+raw_video/
