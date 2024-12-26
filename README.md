@@ -400,6 +400,17 @@ Inference finetuned bbox + segm model with video for **water splash** example:
 python main.py --masks --inference_video --resume output/seg-0619/checkpoint.pth --frozen_weights output/seg-0619/checkpoint.pth --input_video_path source_video/aeratorcompare10M_flow_img.mp4 --output_video_path output_video/aeratorcompare10M_flow_img_out.mp4 --output_mask_video_path output_video/aeratorcompare10M_flow_img_segm_out.mp4 --classes_path water_splash_dataset_2024/classes.txt --confidence_thershold 0.95
 ```
 
+If you are using JetSeaAI local network
+```bash
+ftp 192.168.0.2
+```
+Ask Administor of JetSeaAI to get NAS account for ftp downloading.
+Then push output videos files
+```bash
+cd DETR/output_video
+put /home/user/detr/output_video/WAM_V_1_out.mp4 WAM_V_1_out.mp4
+```
+
 
 ## Multinode training
 Distributed training is available via Slurm and [submitit](https://github.com/facebookincubator/submitit):
