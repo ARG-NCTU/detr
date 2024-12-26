@@ -160,19 +160,23 @@ There are no extra compiled components in DETR and package dependencies are mini
 so the code is very simple to use. We provide instructions how to install dependencies via Docker (recommended) or conda.
 
 ## 1. Clone the repository
-First, clone the repository locally with ssh:
-```
+Clone the repository locally with ssh:
+```bash
 git clone git@github.com:ARG-NCTU/detr.git
 ```
 If you have no ssh key, you can also clone with https:
-```
+```bash
 git clone https://github.com/ARG-NCTU/detr.git
 ```
 
 ## 2. With Docker (recommended)
-Then, install and run the docker image.
+Install and run the docker image on desktop or laptop computer.
+```bash
+source Docker/gpu/run.sh
 ```
-source Docker/docker_run.sh
+Or, install and run the docker image on jetson orin.
+```bash
+source Docker/jetson-orin/run.sh
 ```
 
 ## 2. With Conda (not recommended)
