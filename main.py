@@ -167,7 +167,8 @@ def main(args):
             
             # Run inference on image
             image = cv2.imread(args.input_image_path)
-            out_image = image_inference(image, model, postprocessors, device, args.classes_path, args.confidence_thershold)
+            out_image, _ = image_inference(image, model, postprocessors, device, args.classes_path, args.confidence_thershold)
+            os.makedirs(os.path.dirname(args.output_image_path), exist_ok=True)
             cv2.imwrite(args.output_image_path, out_image)
             return
         

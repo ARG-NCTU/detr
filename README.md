@@ -1,12 +1,14 @@
-**DE⫶TR**: End-to-End Object Detection with Transformers
+**DETR**: End-to-End Object Detection with Transformers
 ========
 
 [![Support Ukraine](https://img.shields.io/badge/Support-Ukraine-FFD500?style=flat&labelColor=005BBB)](https://opensource.fb.com/support-ukraine)
 
+![Inference Example]()
+
 PyTorch training code and pretrained models for **DETR** (**DE**tection **TR**ansformer).
 We replace the full complex hand-crafted object detection pipeline with a Transformer, and match Faster R-CNN with a ResNet-50, obtaining **42 AP** on COCO using half the computation power (FLOPs) and the same number of parameters. Inference in 50 lines of PyTorch.
 
-![DETR](.github/DETR.png)
+![DETR](.github/DETR_inference_example.png)
 
 **What it is**. Unlike traditional computer vision techniques, DETR approaches object detection as a direct set prediction problem. It consists of a set-based global loss, which forces unique predictions via bipartite matching, and a Transformer encoder-decoder architecture. 
 Given a fixed small set of learned object queries, DETR reasons about the relations of the objects and the global image context to directly output the final set of predictions in parallel. Due to this parallel nature, DETR is very fast and efficient.
@@ -377,7 +379,7 @@ rm source_video.zip
 
 Inference finetuned model with **virtual boat & real WAM-V** image for example:
 ```bash
-python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/WamV.jpg --output_image_path output_image/WamV_out.jpg --classes_path classes/boat_classes.txt
+python main.py --inference_image --resume output/0328/checkpoint_0328.pth --input_image_path source_image/boat.png --output_image_path output_image/boat_out.png --classes_path classes/boat_classes.txt
 ```
 
 Inference finetuned model with **virtual boat & real WAM-V** video for example:
@@ -404,11 +406,12 @@ If you are using JetSeaAI local network
 ```bash
 ftp 192.168.0.2
 ```
-Ask Administor of JetSeaAI to get NAS account for ftp downloading.
+Ask Administor of JetSeaAI to get NAS account for ftp uploading.
 Then push output videos files
 ```bash
 cd DETR/output_video
 put /home/user/detr/output_video/WAM_V_1_out.mp4 WAM_V_1_out.mp4
+put /home/user/detr/output_video/kaohsiung_port1_out.mp4 kaohsiung_port1_out.mp4
 ```
 
 
