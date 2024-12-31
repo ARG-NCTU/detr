@@ -53,6 +53,18 @@ RUN git clone --depth 1 https://github.com/cocodataset/panopticapi.git /tmp/pano
     python3.8 -m pip install /tmp/panopticapi && \
     rm -rf /tmp/panopticapi
 
+###################################### ROS2 ####################################
+
+RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | tee /etc/apt/sources.list.d/ros2.list > /dev/null && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    ros-${ROS_DISTRO}-desktop \
+    python3-colcon-common-extensions \
+    python3-rosdep \
+    ros-dev-tools && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 ##################################### Additional Setup #########################################
 
 # Set ownership and permissions for the user
